@@ -7,7 +7,6 @@ from time import sleep
 from random import randint,shuffle
 
 class crawler:
-    """docstring for crawler"""
     def __init__(self,url):
         self.url       = url
         self.headers   = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36'}
@@ -55,7 +54,7 @@ class crawler:
         found_cat = list(set(category_url))
 
         shuffle(found_cat)
-        return found_cat
+        self.category = found_cat
 
     def get_articles_category(self,url_search):
         """
@@ -87,7 +86,7 @@ class crawler:
         print(f" This category have {page_list} pages")
 
         # iterate over pages of the category 
-        if page_list>1: 
+        if (page_list>1) & (page_list<100) : 
             for i in range(1,page_list+1):
                 print(f'   Start scanning page {i}')
                 url_page  = url_search+"&page="+str(i)
@@ -118,7 +117,7 @@ class crawler:
                     except:
                         print('no url')
 
-                print(f"Article gathered {len(data)}")
+                #print(f"Article gathered {len(data)}")
                 #sleep(randint(1,3))
 
             df=pd.DataFrame(data,columns=['Name','id','price','shipping','discount'])
@@ -128,7 +127,25 @@ class crawler:
 
         else:
             fff = html_soup.findAll(class_="sm-category__item")
-            print(f"Article on current page {len(fff)}")
+           # print(f"Article on current page {len(fff)}")
+
+            # add a condition for subcategory 
+            if len(fff)==0:
+                try:
+                    f = html_soup.findAll(class_="sm-image-holder")
+
+                    # do nothing and append the sub cat to the categories 
+                    for i in f:
+                        self.category.append(self.url[:-1]+i["href"]) 
+                    #print(f'Found {len(f)} subcategories')
+
+                    # unsure no doubles 
+                    self.category = list(set(self.category))
+                except:
+                    #print("No subcategory")
+                    pass
+
+
             for i in (fff):
                 try:
                     for i in (fff):
@@ -151,10 +168,10 @@ class crawler:
                 except:
                     print('no url') 
 
-            print(f"Article gathered {len(data)}")
+            #print(f"Article gathered {len(data)}")
             df=pd.DataFrame(data,columns=['Name','id','price','shipping','discount'])
             #sleep(randint(1,3))
-            return df
+            return df.drop_duplicates()
 
     def get_all_articles(self):
         """
@@ -163,14 +180,16 @@ class crawler:
 
         """
         df=pd.DataFrame()
-        category_url = self.get_category()
+        self.get_category()
 
-        for category in category_url[:]:
+        print(f"found {len(self.category)} categories ")
+
+        for category in self.category:
             url_search = self.url + category + '?pageSize=120'
-            print(url_search)
+            #print(url_search)
             dftemp = self.get_articles_category(url_search) # connect
-            print(dftemp.shape)
+            #print(dftemp.shape)
             df = df.append(dftemp,ignore_index=True)
-            print(f"Total Item gathered : {df.shape[0]}")
+            print(f"Total Item gathered : {df.shape[0]}",end=\r)
         return df
 
